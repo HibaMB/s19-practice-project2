@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { UserProgressContext } from "./store/UserProgressContext";
+import { UserProgressContext } from "./store/UserProgressContext.jsx";
 import Modal from "./UI/Modal.jsx";
 import { CartContext } from "./store/CartContext.jsx";
 import { currencyFormatter } from "../util/formatting.js";
@@ -26,13 +26,11 @@ export default function Checkout() {
     requestConfig
   );
 
-  function handleSubmitCheckout(event) {
+  function handleSubmit(event) {
     event.preventDefault();
 
-    const formData = new FormData(event.target);
-    const customerData = Object.fromEntries(formData.entries());
-    console.log(customerData);
-
+    const fd = new FormData(event.target);
+    const customerData = Object.fromEntries(fd.entries());
     sendRequest(
       JSON.stringify({
         order: {
@@ -43,10 +41,27 @@ export default function Checkout() {
     );
   }
 
+  function handleClose() {
+    userProgressCtx.hideCheckout();
+  }
+
   function handleFinish() {
     userProgressCtx.hideCheckout();
     cartCtx.clearCart();
     clearData();
+  }
+
+  let actions = (
+    <>
+      <Button type="button" onClick={handleClose}>
+        Close
+      </Button>
+      <Button>Submit Order</Button>
+    </>
+  );
+
+  if (isLoading) {
+    actions = <span>Sending Order Data ...</span>;
   }
 
   if (data && !error) {
@@ -55,25 +70,20 @@ export default function Checkout() {
         open={userProgressCtx.progress === "checkout"}
         onClose={handleFinish}
       >
-        <h2>Success!</h2>
-        <p>Order submitted successfully!</p>
+        <h2>Data submitted successfully!</h2>
+        <p>Your order will be preapred soon..</p>
         <p className="modal-actions">
-          <Button onClick={handleFinish}>Okay</Button>
+          <Button type="button" onClick={handleFinish}>
+            Okay
+          </Button>
         </p>
       </Modal>
     );
   }
 
   return (
-    <Modal
-      open={userProgressCtx.progress === "checkout"}
-      onClose={
-        userProgressCtx.progress === "checkout"
-          ? userProgressCtx.hideCheckout
-          : null
-      }
-    >
-      <form onSubmit={handleSubmitCheckout}>
+    <Modal open={userProgressCtx.progress === "checkout"} onClose={handleClose}>
+      <form onSubmit={handleSubmit}>
         <h2>Checkout Form</h2>
         <p>Total Amount: {currencyFormatter.format(cartTotal)}</p>
 
@@ -85,21 +95,7 @@ export default function Checkout() {
           <Input label="City" id="city" type="text" required />
         </div>
         {error && <Error title="Submit Order failed!" message={error} />}
-        <p className="modal-actions">
-          {!isLoading && (
-            <>
-              <Button
-                textOnly
-                type="button"
-                onClick={userProgressCtx.hideCheckout}
-              >
-                Close
-              </Button>
-              <Button>Submit Order</Button>
-            </>
-          )}
-          {isLoading && <p>Submitting order...</p>}
-        </p>
+        <p className="modal-actions">{actions}</p>
       </form>
     </Modal>
   );
